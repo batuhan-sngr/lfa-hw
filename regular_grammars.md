@@ -1,19 +1,24 @@
-Generating Strings with Context-Free Grammars and Converting to Finite Automata
-Course: Formal Languages & Finite Automata
-Author: John Doe
-Theory
+# **Generating Strings with Context-Free Grammars and Converting to Finite Automata**
+
+### **Course: Formal Languages & Finite Automata**
+### **Author: Emre Batuhan Sungur**
+
+----
+
+## **Theory**
 In formal language theory, a context-free grammar (CFG) is a set of production rules that define the syntax of a language. A finite automaton is a mathematical model of computation used to recognize patterns within strings. The relationship between CFGs and finite automata lies in their ability to describe the same set of languages, making them interchangeable in certain contexts.
 
-Objectives:
-Implement a Python class representing a context-free grammar.
-Develop a method to generate strings based on the grammar rules.
-Convert the generated grammar into a finite automaton.
-Implementation description
-Grammar Class
-The Grammar class initializes with a set of non-terminal symbols (VN), terminal symbols (VT), and production rules (P). It also provides a method generate_string() to generate strings following the grammar rules.
+## **Objectives:**
+* **Implement a Python class representing a context-free grammar.**
+* **Develop a method to generate strings based on the grammar rules.**
+* **Convert the generated grammar into a finite automaton.**
 
-python
-Copy code
+## **Implementation description**
+
+### **Grammar Class**
+The `Grammar` class initializes with a set of non-terminal symbols (VN), terminal symbols (VT), and production rules (P). It also provides a method `generate_string()` to generate strings following the grammar rules.
+
+```python
 class Grammar:
     def __init__(self):
         self.VN = {'S', 'A', 'B', 'C'}
@@ -42,10 +47,11 @@ class Grammar:
                     else:
                         current_symbol = symbol
         return string
-FiniteAutomaton Class
+```
+### **FiniteAutomaton Class**
 The FiniteAutomaton class represents a finite automaton with its terminals, non-terminals, transitions, start state, and accept states. It provides a method string_belongs_to_language() to check if a given string belongs to the language accepted by the automaton.
 
-python
+``` python
 Copy code
 class FiniteAutomaton:
     def __init__(self, terminals, non_terminals, transitions, start_state, accept_states):
@@ -63,10 +69,11 @@ class FiniteAutomaton:
             else:
                 return False
         return current_state in self.accept_states
-Main Class
+```
+### **Main Class**
 The Main class initializes a grammar instance, extracts terminals and non-terminals, builds transitions for the finite automaton, and executes by generating strings and checking their acceptance.
 
-python
+``` python
 Copy code
 class Main:
     def __init__(self):
@@ -99,9 +106,10 @@ class Main:
 if __name__ == "__main__":
     main = Main()
     main.execute()
-Conclusions
+```
+## **Conclusions**
 The implemented code demonstrates the generation of strings based on context-free grammar rules and the conversion of these grammars into finite automata. This approach allows for the exploration of language recognition within a computational framework.
 
-References
-Hopcroft, J. E., Motwani, R., & Ullman, J. D. (2006). Introduction to Automata Theory, Languages, and Computation. Pearson Education.
-Wikipedia contributors. (2022). Context-free grammar. In Wikipedia, The Free Encyclopedia.
+### **References**
+Hopcroft, J. E., Motwani, R., & Ullman, J. D. (2006). Introduction to Automata Theory, Languages, and Computation. Pearson Education. https://www-2.dc.uba.ar/staff/becher/Hopcroft-Motwani-Ullman-2001.pdf
+Wikipedia contributors, "Context-free grammar," Wikipedia, The Free Encyclopedia, https://en.wikipedia.org/w/index.php?title=Context-free_grammar&oldid=1193952841
