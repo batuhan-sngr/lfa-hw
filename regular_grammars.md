@@ -1,4 +1,4 @@
-# **Generating Strings with Context-Free Grammars and Converting to Finite Automata**
+# **Regular Grammars**
 
 ### **Course: Formal Languages & Finite Automata**
 ### **Author: Emre Batuhan Sungur**
@@ -33,7 +33,7 @@ In formal language theory, a context-free grammar (CFG) is a set of production r
 ## **Implementation description**
 
 ### **Grammar Class**
-The `Grammar` class initializes with a set of non-terminal symbols (VN), terminal symbols (VT), and production rules (P). It also provides a method `generate_string()` to generate strings following the grammar rules.
+The `Grammar` class initializes with a set of non-terminal symbols (VN), terminal symbols (VT), and production rules (P). It also provides a method `generate_string()` to generate strings following the grammar rules. As well as `to_finite_automaton` to convert and object of type Grammar to one of type Finite Automaton.
 
 ```python
 class Grammar:
@@ -49,75 +49,145 @@ class Grammar:
 
     def generate_string(self):
         import random
-        max_length = 10  # Maximum length of generated string to avoid infinite loop
-        string = ''
+
+        generated_string = ""
+
+        # Start with the initial symbol S
         current_symbol = 'S'
-        while len(string) < max_length:
-            if current_symbol in self.VT:
-                string += current_symbol
-                break
-            else:
-                production = random.choice(self.P[current_symbol])
+
+        # Keep expanding the current symbol until only terminal symbols are left
+        while any(symbol in self.VN for symbol in current_symbol):
+            for symbol in current_symbol:
+                if symbol in self.VT:
+                    generated_string += symbol
+                else:
+                    # Choose a random production for non-terminal symbol
+                    production = random.choice(self.P[symbol])
+                    # Add the production to the generated string
+                    generated_string += production
+
+            # Update current symbol with the newly generated string
+            current_symbol = generated_string
+            generated_string = ""  # Reset generated string for next iteration
+
+        return current_symbol
+
+
+    def to_finite_automaton(self):
+        terminals = self.VT
+        non_terminals = self.VN
+        transitions = {}  # Dictionary representing transitions: {(state, symbol): next_state}
+        start_state = 'S'  # Initial state
+        accept_states = {'S'}  # Set of accept states
+
+        # Build transitions based on grammar productions
+        for variable, productions in self.P.items():
+            for production in productions:
+                source_state = variable
                 for symbol in production:
-                    if symbol in self.VT:
-                        string += symbol
+                    if symbol in non_terminals:
+                        # Epsilon transition from source state to next non-terminal symbol
+                        transitions.setdefault((source_state, ''), set()).add(symbol)
+                        # Update source state to next non-terminal symbol
+                        source_state = symbol
                     else:
-                        current_symbol = symbol
-        return string
+                        # Transition from source state to terminal symbol
+                        transitions.setdefault((source_state, symbol), set()).add(source_state)
+
+        # Convert epsilon transitions to single transitions
+        for state, next_states in transitions.items():
+            if '' in next_states:
+                transitions[(state, '')] = state
+                del next_states['']  # Remove epsilon transition
+
+        # Print the finite automaton information
+        print("Finite Automaton:")
+        print("Terminals:", terminals)
+        print("Non-terminals:", non_terminals)
+        print("Transitions:")
+        for transition, next_state in transitions.items():
+            print(f"  {transition[0]} --({transition[1]})-> {next_state}")
+        print("Start State:", start_state)
+        print("Accept States:", accept_states)
+
+        return FiniteAutomaton(terminals, non_terminals, transitions, start_state, accept_states)
 ```
 ### **FiniteAutomaton Class**
-The FiniteAutomaton class represents a finite automaton with its terminals, non-terminals, transitions, start state, and accept states. It provides a method string_belongs_to_language() to check if a given string belongs to the language accepted by the automaton.
+The `FiniteAutomaton` class represents a finite automaton with its terminals, non-terminals, transitions, start state, and accept states. It provides a method `string_belongs_to_language()` to check if a given string belongs to the language accepted by the automaton.
 
 ``` python
 Copy code
 class FiniteAutomaton:
     def __init__(self, terminals, non_terminals, transitions, start_state, accept_states):
-        self.terminals = terminals
-        self.non_terminals = non_terminals
-        self.transitions = transitions
-        self.start_state = start_state
-        self.accept_states = accept_states
+        self.terminals = terminals  # Set of terminal symbols
+        self.non_terminals = non_terminals  # Set of non-terminal symbols
+        self.transitions = {}  # Dictionary representing transitions: {(state, symbol): next_state}
+        for key, value in transitions.items():
+            self.transitions[tuple(key)] = value
+        self.start_state = start_state  # Initial state
+        self.accept_states = accept_states  # Set of accept states
 
     def string_belongs_to_language(self, input_string):
-        current_state = self.start_state
+        current_states = {self.start_state}
+        # Helper function to get next states for a given state and symbol
+        def get_next_states(state, symbol, visited):
+            visited.add(state)
+            next_states = set()
+            for s in self.transitions.get((state, symbol), []):
+                if s not in visited:
+                    next_states.add(s)
+                    next_states |= get_next_states(s, symbol, visited)
+            for s in self.transitions.get((state, ''), []):
+                if s not in visited:
+                    next_states |= get_next_states(s, symbol, visited)
+            return next_states
+
+        # Iterate over each symbol in the input string
         for symbol in input_string:
-            if (current_state, symbol) in self.transitions:
-                current_state = self.transitions[(current_state, symbol)]
-            else:
-                return False
-        return current_state in self.accept_states
+            next_states = set()
+            for state in current_states:
+                next_states |= get_next_states(state, symbol, set())
+            current_states = next_states
+
+        # Check if any of the current states are accept states
+        for state in current_states:
+            if state in self.accept_states:
+                return True
+        return False
 ```
 ### **Main Class**
-The Main class initializes a grammar instance, extracts terminals and non-terminals, builds transitions for the finite automaton, and executes by generating strings and checking their acceptance.
+The `Main` class initializes a grammar instance, extracts terminals and non-terminals, builds transitions for the finite automaton, and executes by generating strings and checking their acceptance.
 
 ``` python
 Copy code
 class Main:
     def __init__(self):
         self.grammar = Grammar()
+        self.finite_automaton = self.grammar.to_finite_automaton()
         self.terminals = self.grammar.VT
         self.non_terminals = self.grammar.VN
-        self.transitions = {}  
-        self.start_state = 'S'  
-        self.accept_states = {'S'}  
+        self.transitions = {}  # Initialize transitions based on grammar
+        self.start_state = 'S'  # Set start state
+        self.accept_states = {'S'}  # Set accept states
         self.build_transitions()
 
     def build_transitions(self):
+        # Initialize transitions with empty transitions for all states
+        for state in self.grammar.VN:
+            self.transitions[(state, '')] = state
+        # Build transitions based on grammar productions
         for variable in self.grammar.P:
             for production in self.grammar.P[variable]:
-                if len(production) == 2:  
-                    source_state = variable
-                    target_state = production[1]
-                    symbol = production[0]
-                    self.transitions[(source_state, symbol)] = target_state
+                source_state = variable
+                target_state = production
+                symbol = ''
+                self.transitions[(source_state, symbol)] = target_state
 
     def execute(self):
-        finite_automaton = FiniteAutomaton(self.terminals, self.non_terminals, self.transitions, self.start_state, self.accept_states)
+        print("The 5 random strings that have been created by the grammar:")
         for _ in range(5):
             generated_string = self.grammar.generate_string()
-            print("Generated String:", generated_string)
-            print("Belongs to Language:", finite_automaton.string_belongs_to_language(generated_string))
-            print()
+            print(f'{generated_string}')
 
 
 if __name__ == "__main__":
@@ -128,5 +198,6 @@ if __name__ == "__main__":
 The implemented code demonstrates the generation of strings based on context-free grammar rules and the conversion of these grammars into finite automata. This approach allows for the exploration of language recognition within a computational framework.
 
 ### **References**
-Hopcroft, J. E., Motwani, R., & Ullman, J. D. (2006). Introduction to Automata Theory, Languages, and Computation. Pearson Education. https://www-2.dc.uba.ar/staff/becher/Hopcroft-Motwani-Ullman-2001.pdf
-Wikipedia contributors, "Context-free grammar," Wikipedia, The Free Encyclopedia, https://en.wikipedia.org/w/index.php?title=Context-free_grammar&oldid=1193952841
+* Hopcroft, J. E., Motwani, R., & Ullman, J. D. (2006). Introduction to Automata Theory, Languages, and Computation. Pearson Education. https://www-2.dc.uba.ar/staff/becher/Hopcroft-Motwani-Ullman-2001.pdf
+
+* Wikipedia contributors, "Context-free grammar," Wikipedia, The Free Encyclopedia, https://en.wikipedia.org/w/index.php?title=Context-free_grammar&oldid=1193952841
