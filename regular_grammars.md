@@ -116,7 +116,6 @@ class Grammar:
 The `FiniteAutomaton` class represents a finite automaton with its terminals, non-terminals, transitions, start state, and accept states. It provides a method `string_belongs_to_language()` to check if a given string belongs to the language accepted by the automaton.
 
 ``` python
-Copy code
 class FiniteAutomaton:
     def __init__(self, terminals, non_terminals, transitions, start_state, accept_states):
         self.terminals = terminals  # Set of terminal symbols
@@ -159,7 +158,6 @@ class FiniteAutomaton:
 The `Main` class initializes a grammar instance, extracts terminals and non-terminals, builds transitions for the finite automaton, and executes by generating strings and checking their acceptance.
 
 ``` python
-Copy code
 class Main:
     def __init__(self):
         self.grammar = Grammar()
