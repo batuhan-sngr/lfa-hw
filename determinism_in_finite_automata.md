@@ -33,99 +33,153 @@ Your program needs to gather and send the data about the automaton and the lib/t
 
 ## **Implementation description**
 
-### **Grammar Class**
-The `Grammar` class represents a finite automaton with its states (Q), alphabet (sigma), transition function (delta), and accept states (F). It also includes a method to classify the grammar in the Chomsky hierarchy as a regular grammar.
+### **Finite Automaton Class**
+The `FiniteAutomaton` class represents a finite automaton (FA) and provides methods for various operations such as checking determinism, converting to a regular grammar, converting to a deterministic finite automaton (DFA), and drawing a graphical representation of the automaton.
 
 ```python
-class Grammar:
-    def __init__(self, Q, sigma, delta, F):
-        self.Q = Q 
-        self.sigma = sigma 
-        self.delta = delta  
-        self.F = F  
+class FiniteAutomaton:
+    def __init__(self, states, alphabet, transitions, initial_state, final_states):
+        self.states = states
+        self.alphabet = alphabet
+        self.transitions = transitions
+        self.initial_state = initial_state
+        self.final_states = final_states
 
-    def classify_chomsky_hierarchy(self):
-        # Count the number of symbols on the left and right side of productions
-        left_symbols = set()
-        right_symbols = set()
-        for transition, next_state in self.delta.items():
-            left_symbols.add(transition[0])
-            right_symbols.add(next_state)
+    def is_deterministic(self):
+        for state in self.states:
+            for symbol in self.alphabet:
+                if len(self.transitions.get((state, symbol), [])) > 1:
+                    return False
+        return True
 
-        # Determine the type of grammar based on the Chomsky hierarchy
-        if left_symbols == set(self.Q) and right_symbols == set(self.sigma).union({'ε'}):
-            return "Type 0 (Unrestricted Grammar)"
-        elif left_symbols == set(self.Q) and right_symbols <= set(self.sigma).union({'ε'}):
-            return "Type 1 (Context-Sensitive Grammar)"
-        elif left_symbols <= set(self.Q) and right_symbols <= set(self.sigma).union({'ε'}) and 'ε' not in right_symbols:
-            return "Type 2 (Context-Free Grammar)"
-        elif left_symbols <= set(self.Q) and len(right_symbols) == 1:
-            return "Type 3 (Regular Grammar)"
-        else:
-            return "Unknown Type"
+    def to_regular_grammar(self):
+        dfa = self.to_dfa()
+        if not dfa.is_deterministic():
+            raise ValueError("Cannot convert non-deterministic finite automaton to regular grammar")
+
+        grammar = {}
+        for state in dfa.states:
+            for symbol in dfa.alphabet:
+                next_state = dfa.transitions.get((state, symbol), '')
+                if next_state:
+                    grammar.setdefault(state, []).append(symbol + next_state)
+
+        return grammar
+
+    def to_dfa(self):
+        if self.is_deterministic():
+            return self
+
+        dfa_states = set()
+        dfa_transitions = {}
+        dfa_final_states = set()
+
+        def epsilon_closure(states):
+            closure = set(states)
+            for state in states:
+                for next_state in self.transitions.get((state, ''), []):
+                    if next_state not in closure:
+                        closure.add(next_state)
+                        closure.update(epsilon_closure([next_state]))
+            return closure
+
+        initial_state_closure = epsilon_closure([self.initial_state])
+        dfa_states.add(tuple(sorted(initial_state_closure)))
+        queue = [initial_state_closure]
+
+        while queue:
+            current_states = queue.pop(0)
+            current_states_tuple = tuple(sorted(current_states))
+
+            for symbol in self.alphabet:
+                next_states = set()
+                for state in current_states:
+                    next_states.update(self.transitions.get((state, symbol), []))
+                next_states_closure = epsilon_closure(next_states)
+                next_states_closure_tuple = tuple(sorted(next_states_closure))
+
+                if next_states_closure_tuple:
+                    if next_states_closure_tuple not in dfa_states:
+                        dfa_states.add(next_states_closure_tuple)
+                        queue.append(next_states_closure)
+                    dfa_transitions[(current_states_tuple, symbol)] = next_states_closure_tuple
+
+        for state in dfa_states:
+            if any(final_state in state for final_state in self.final_states):
+                dfa_final_states.add(state)
+
+        return FiniteAutomaton(dfa_states, self.alphabet, dfa_transitions, initial_state_closure, dfa_final_states)
 
 ```
 ### **Visualization Function**
-The `visualize_fa` function visualizes the finite automaton using Matplotlib. It plots the states and transitions of the automaton.
+The `draw_graph()` method in the FiniteAutomaton class is responsible for drawing a graphical representation of the finite automaton using the Graphviz library. The `draw_graph()` method generates a visual representation of the finite automaton as a directed graph, where states are represented as nodes and transitions are represented as edges between the nodes. This graphical representation helps in visualizing the structure and behavior of the finite automaton.
 
 ``` python
-def visualize_fa(self):
-    plt.figure(figsize=(8, 6))
+def draw_graph(self):
+        dot = graphviz.Digraph()
 
-    for transition, next_state in self.delta.items():
-        x_start = int(transition[0][1])
-        y_start = 0
-        x_end = int(next_state[1])
-        y_end = 0
-        plt.arrow(x_start, y_start, x_end - x_start, y_end - y_start, head_width=0.1, head_length=0.1, fc='k', ec='k')
+        for state in self.states:
+            state_label = ', '.join(state) if isinstance(state, tuple) else state
+            if state in self.final_states:
+                dot.node(state_label, shape='doublecircle')
+            else:
+                dot.node(state_label)
 
-    for state in self.Q:
-        x = int(state[1])
-        y = 0
-        if state in self.F:
-            plt.plot(x, y, 'ro')  
-        else:
-            plt.plot(x, y, 'bo')  
-        plt.text(x, y, state, fontsize=12, ha='center', va='center')
+        for transition, next_states in self.transitions.items():
+            current_states, symbol = transition
+            current_states_label = ', '.join(current_states) if isinstance(current_states, tuple) else current_states
+            for next_state in next_states:
+                next_state_label = ', '.join(next_state) if isinstance(next_state, tuple) else next_state
+                dot.edge(current_states_label, next_state_label, label=symbol)
 
-    plt.xlim(0, 4)
-    plt.ylim(-1, 1)
-    plt.xlabel('X-axis')
-    plt.title('Finite Automaton')
+        try:
+            dot.render('finite_automaton_graph', format='png', cleanup=True)
+            print("Finite automaton graph saved as finite_automaton_graph.png")
+        except Exception as e:
+            print("Error rendering graph:", e)
 
-    plt.grid(True)
-    plt.show()
-
+        return dot
 ```
 ### **Main Class**
-The `Main` class initializes the finite automaton and executes the visualization.
+The `Main` class orchestrates the execution of operations such as creating a finite automaton object, determining its properties, and visualizing it.
 
 ``` python
-class Main:
-    def __init__(self):
-        self.Q = {'q0', 'q1', 'q2', 'q3'}
-        self.sigma = {'a', 'b', 'c'}
-        self.delta = {
-            ('q0', 'a'): 'q0',
-            ('q0', 'b'): 'q2',
-            ('q1', 'a'): 'q1',
-            ('q1', 'b'): 'q3',
-            ('q1', 'c'): 'q2',
-            ('q2', 'b'): 'q3'
-        }
-        self.F = {'q3'}
-        self.grammar = Grammar(self.Q, self.sigma, self.delta, self.F)
+def main():
+    states = {'q0', 'q1', 'q2', 'q3'}
+    alphabet = {'a', 'b', 'c'}
+    transitions = {
+        ('q0', 'a'): {'q0', 'q1'},
+        ('q0', 'b'): {'q2'},
+        ('q1', 'a'): {'q1'},
+        ('q1', 'b'): {'q3'},
+        ('q1', 'c'): {'q2'},
+        ('q2', 'b'): {'q3'}
+    }
+    initial_state = 'q0'
+    final_states = {'q3'}
 
-    def run(self):
-        classification = self.grammar.classify_chomsky_hierarchy()
-        print("Classification:", classification)
+    fa = FiniteAutomaton(states, alphabet, transitions, initial_state, final_states)
 
-        self.visualize_fa()
+    if fa.is_deterministic():
+        print("The finite automaton is deterministic.")
+    else:
+        print("The finite automaton is non-deterministic.")
+        dfa = fa.to_dfa()
+        print("Converted to DFA.")
+
+    try:
+        regular_grammar = fa.to_regular_grammar()
+        print("Regular Grammar:")
+        for state, productions in regular_grammar.items():
+            for production in productions:
+                print(f"{state} -> {production}")
+    except ValueError as e:
+        print(e)
+
+    fa.draw_graph()
 
 if __name__ == "__main__":
-    main = Main()
-    main.run()
-
+    main()
 ```
 ## **Conclusions**
 In this work, we successfully implemented a Python program to visualize a finite automaton. By leveraging Matplotlib, we created a graphical representation of the automaton's states and transitions, providing valuable insights into its structure and behavior.
