@@ -11,9 +11,7 @@ class Grammar:
 
     def generate_string(self):
         import random
-
         generated_string = ""
-
         # Start with the initial symbol S
         current_symbol = 'S'
 
@@ -40,27 +38,29 @@ class Grammar:
         non_terminals = self.VN
         transitions = {}  # Dictionary representing transitions: {(state, symbol): next_state}
         start_state = 'S'  # Initial state
-        accept_states = {'S'}  # Set of accept states
+        accept_states = {'FINAL'}  # Set of accept states
 
         # Build transitions based on grammar productions
         for variable, productions in self.P.items():
             for production in productions:
                 source_state = variable
-                for symbol in production:
-                    if symbol in non_terminals:
-                        # Epsilon transition from source state to next non-terminal symbol
-                        transitions.setdefault((source_state, ''), set()).add(symbol)
-                        # Update source state to next non-terminal symbol
-                        source_state = symbol
-                    else:
+                if len(production) == 1 :
+                    transitions.setdefault((source_state, production[0]), set()).add('FINAL')
+                else:
+                    t, nt = "", ""
+                    for symbol in production:
+                        if symbol in non_terminals:
+                            nt = symbol
+                        else:
+                            t = symbol
                         # Transition from source state to terminal symbol
-                        transitions.setdefault((source_state, symbol), set()).add(source_state)
+                    transitions.setdefault((source_state, t), set()).add(nt)
 
-        # Convert epsilon transitions to single transitions
-        for state, next_states in transitions.items():
-            if '' in next_states:
-                transitions[(state, '')] = state
-                del next_states['']  # Remove epsilon transition
+        # # Convert epsilon transitions to single transitions
+        # for state, next_states in transitions.items():
+        #     if '' in next_states:
+        #         transitions[(state, '')] = state
+        #         del next_states['']  # Remove epsilon transition
 
         # Print the finite automaton information
         print("Finite Automaton:")
@@ -140,6 +140,9 @@ class Main:
         for _ in range(5):
             generated_string = self.grammar.generate_string()
             print(f'{generated_string}')
+        fa = self.grammar.to_finite_automaton()
+        print(fa.string_belongs_to_language("abaabb"))
+        print(fa.string_belongs_to_language("a"))
 
 
 if __name__ == "__main__":
