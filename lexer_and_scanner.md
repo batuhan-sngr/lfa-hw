@@ -77,7 +77,7 @@ for token in lexer(input_text):
     print(token)
 
 ```
-# **Output**
+#### **Output**
 ``` terminal
 ('DEF', 'def')
 ('IDENTIFIER', 'foo')
