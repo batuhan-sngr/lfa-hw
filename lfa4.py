@@ -7,7 +7,7 @@ def generate_combinations(regex):
     combinations = []
     chosen_options = []
 
-    while len(combinations) < 4:  # Ensure at least 4 combinations are generated
+    while len(combinations) < 4:
         combinations.clear()
         chosen_options.clear()
 
